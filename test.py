@@ -13,7 +13,7 @@ server = Flask(__name__)
 bot = telebot.TeleBot("7330127698:AAFNVUPAXpw80JAP7qLNjpYNTQdMD497pI8")
 
 # Your Telegram user ID (to restrict admin command access) - Replace with your actual ID
-ADMIN_ID = 123456789  # Get this by sending a message to @userinfobot
+ADMIN_ID = 5058312884  # Get this by sending a message to @userinfobot
 
 # SQLite database file
 DB_FILE = 'registered_users.db'
