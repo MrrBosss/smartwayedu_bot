@@ -6,6 +6,11 @@ from flask import Flask, request
 import os
 import psycopg2
 from psycopg2 import pool
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Initialize Flask app
 server = Flask(__name__)
@@ -14,7 +19,7 @@ server = Flask(__name__)
 bot = telebot.TeleBot("7330127698:AAFNVUPAXpw80JAP7qLNjpYNTQdMD497pI8")
 
 # Your Telegram user ID (replace with your actual ID from @userinfobot)
-ADMIN_ID = 5058312884  # Replace with your Telegram ID
+ADMIN_ID = 5058312884  # Replace with your Telegram ID (integer)
 
 # Supabase PostgreSQL connection details (replace with your Supabase credentials)
 DB_CONFIG = {
@@ -30,7 +35,16 @@ db_pool = None
 
 def init_db_pool():
     global db_pool
-    db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, **DB_CONFIG)
+    try:
+        logger.info("Initializing Supabase connection pool...")
+        db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, **DB_CONFIG)
+        if db_pool:
+            logger.info("Supabase connection pool initialized successfully.")
+        else:
+            logger.error("Failed to initialize Supabase connection pool.")
+    except Exception as e:
+        logger.error(f"Error initializing Supabase connection: {str(e)}")
+        raise
 
 # Dictionary to store user state and data during registration
 user_states = {}
@@ -165,6 +179,10 @@ def save_user_data(chat_id):
                   (chat_id, user_states[chat_id]['service'], user_states[chat_id]['name'],
                    user_states[chat_id]['age'], user_states[chat_id]['language_test'], user_states[chat_id]['phone']))
         conn.commit()
+        logger.info(f"Saved user data for chat_id: {chat_id}")
+    except Exception as e:
+        logger.error(f"Error saving user data: {str(e)}")
+        raise
     finally:
         db_pool.putconn(conn)
     del user_states[chat_id]
@@ -191,6 +209,10 @@ def get_users(message):
         c = conn.cursor()
         c.execute("SELECT * FROM users")
         users = c.fetchall()
+        logger.info(f"Fetched {len(users)} users for admin request")
+    except Exception as e:
+        logger.error(f"Error fetching users: {str(e)}")
+        raise
     finally:
         db_pool.putconn(conn)
 
@@ -236,19 +258,19 @@ def webhook():
     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
     bot.remove_webhook()
     bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+    logger.info(f"Webhook set to: https://{render_url}/{bot.token}")
     return "Webhook set!", 200
 
 # Start the server
 if __name__ == "__main__":
+    logger.info("Starting bot...")
     init_db_pool()  # Initialize the database connection pool
     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
     bot.remove_webhook()
     bot.set_webhook(url=f"https://{render_url}/{bot.token}")
     port = int(os.environ.get("PORT", 5000))
+    logger.info(f"Starting Flask server on port {port}")
     server.run(host="0.0.0.0", port=port)
-
-
-
 
 
 
