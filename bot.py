@@ -26,7 +26,7 @@ DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres",
     "password": "Abdumuratovs_05",
-    "host": "vwqbbjhurdgehawqxtcu.supabase.co",
+    "host": "db.vwqbbjhurdgehawqxtcu.supabase.co",
     "port": "5432"
 }
 
