@@ -24,9 +24,9 @@ ADMIN_ID = 5058312884  # Replace with your Telegram ID (integer)
 # Supabase PostgreSQL connection details (replace with your Supabase credentials)
 DB_CONFIG = {
     "dbname": "postgres",
-    "user": "postgres",
+    "user": "postgres.vwqbbjhurdgehawqxtcu",
     "password": "Abdumuratovs_05",
-    "host": "db.vwqbbjhurdgehawqxtcu.supabase.co",
+    "host": "aws-0-eu-central-1.pooler.supabase.com",
     "port": "5432"
 }
 
