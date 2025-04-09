@@ -275,7 +275,7 @@
 
 
 import telebot
-from telebot import types
+from telebot import types, apihelper
 import json
 import re
 from flask import Flask, request
@@ -283,6 +283,7 @@ import os
 import psycopg2
 from psycopg2 import pool
 import logging
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -532,19 +533,41 @@ def get_message():
 @server.route('/')
 def webhook():
     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
-    bot.remove_webhook()
-    bot.set_webhook(url=f"https://{render_url}/{bot.token}")
-    logger.info(f"Webhook set to: https://{render_url}/{bot.token}")
-    return "Webhook set!", 200
+    bot.remove_webhook()  # Clear any existing webhook first
+    for attempt in range(3):  # Retry up to 3 times
+        try:
+            bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+            logger.info(f"Webhook set to: https://{render_url}/{bot.token}")
+            return "Webhook set!", 200
+        except apihelper.ApiTelegramException as e:
+            if e.error_code == 429:
+                retry_after = int(e.description.split("retry after ")[-1]) if "retry after" in e.description else 1
+                logger.warning(f"Too Many Requests, retrying after {retry_after} second(s)...")
+                time.sleep(retry_after)
+            else:
+                logger.error(f"Failed to set webhook: {str(e)}")
+                return f"Webhook failed: {str(e)}", 500
+    return "Webhook set failed after retries", 500
 
 # Start the server
 if __name__ == "__main__":
     logger.info("Starting bot...")
     init_db_pool()  # Initialize the database connection pool
     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
-    bot.remove_webhook()
-    bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+    bot.remove_webhook()  # Clear any existing webhook
+    for attempt in range(3):  # Retry up to 3 times
+        try:
+            bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+            logger.info(f"Webhook set to: https://{render_url}/{bot.token}")
+            break
+        except apihelper.ApiTelegramException as e:
+            if e.error_code == 429:
+                retry_after = int(e.description.split("retry after ")[-1]) if "retry after" in e.description else 1
+                logger.warning(f"Too Many Requests, retrying after {retry_after} second(s)...")
+                time.sleep(retry_after)
+            else:
+                logger.error(f"Failed to set webhook on startup: {str(e)}")
+                raise
     port = int(os.environ.get("PORT", 5000))
     logger.info(f"Starting Flask server on port {port}")
     server.run(host="0.0.0.0", port=port)
-    
