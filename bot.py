@@ -19,7 +19,7 @@ server = Flask(__name__)
 bot = telebot.TeleBot("7330127698:AAFNVUPAXpw80JAP7qLNjpYNTQdMD497pI8")
 
 # List of Telegram user IDs for admins (add as many as needed)
-ADMIN_IDS = [5058312884, 123456789, 987654321]  # Replace with actual Telegram IDs
+ADMIN_IDS = [5058312884, 483389548]  # Replace with actual Telegram IDs
 
 # Supabase PostgreSQL connection details
 DB_CONFIG = {
