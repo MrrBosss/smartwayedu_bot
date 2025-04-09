@@ -18,10 +18,10 @@ server = Flask(__name__)
 # Replace with your bot token
 bot = telebot.TeleBot("7330127698:AAFNVUPAXpw80JAP7qLNjpYNTQdMD497pI8")
 
-# Your Telegram user ID (replace with your actual ID from @userinfobot)
-ADMIN_ID = 5058312884  # Replace with your Telegram ID (integer)
+# List of Telegram user IDs for admins (add as many as needed)
+ADMIN_IDS = [5058312884, 123456789, 987654321]  # Replace with actual Telegram IDs
 
-# Supabase PostgreSQL connection details (replace with your Supabase credentials)
+# Supabase PostgreSQL connection details
 DB_CONFIG = {
     "dbname": "postgres",
     "user": "postgres.vwqbbjhurdgehawqxtcu",
@@ -200,7 +200,7 @@ def send_social_links(chat_id):
 # Admin command to get all users
 @bot.message_handler(commands=['get_users'])
 def get_users(message):
-    if message.chat.id != ADMIN_ID:
+    if message.chat.id not in ADMIN_IDS:  # Check if chat.id is in the admin list
         bot.send_message(message.chat.id, "Bu buyruq faqat admin uchun!")
         return
 
@@ -274,16 +274,19 @@ if __name__ == "__main__":
 
 
 
-
-
-
 # import telebot
 # from telebot import types
 # import json
 # import re
 # from flask import Flask, request
 # import os
-# import sqlite3
+# import psycopg2
+# from psycopg2 import pool
+# import logging
+
+# # Set up logging
+# logging.basicConfig(level=logging.INFO)
+# logger = logging.getLogger(__name__)
 
 # # Initialize Flask app
 # server = Flask(__name__)
@@ -291,26 +294,33 @@ if __name__ == "__main__":
 # # Replace with your bot token
 # bot = telebot.TeleBot("7330127698:AAFNVUPAXpw80JAP7qLNjpYNTQdMD497pI8")
 
-# # Your Telegram user ID (to restrict admin command access) - Replace with your actual ID
-# ADMIN_ID = 5058312884  # Get this by sending a message to @userinfobot
+# # Your Telegram user ID (replace with your actual ID from @userinfobot)
+# ADMIN_ID = 5058312884  # Replace with your Telegram ID (integer)
 
-# # SQLite database file
-# DB_FILE = 'registered_users.db'
+# # Supabase PostgreSQL connection details (replace with your Supabase credentials)
+# DB_CONFIG = {
+#     "dbname": "postgres",
+#     "user": "postgres.vwqbbjhurdgehawqxtcu",
+#     "password": "Abdumuratovs_05",
+#     "host": "aws-0-eu-central-1.pooler.supabase.com",
+#     "port": "5432"
+# }
 
-# # Initialize SQLite database
-# def init_db():
-#     conn = sqlite3.connect(DB_FILE)
-#     c = conn.cursor()
-#     c.execute('''CREATE TABLE IF NOT EXISTS users (
-#                     chat_id INTEGER,
-#                     service TEXT,
-#                     name TEXT,
-#                     age INTEGER,
-#                     language_test TEXT,
-#                     phone TEXT
-#                  )''')
-#     conn.commit()
-#     conn.close()
+# # Connection pool for PostgreSQL
+# db_pool = None
+
+# def init_db_pool():
+#     global db_pool
+#     try:
+#         logger.info("Initializing Supabase connection pool...")
+#         db_pool = psycopg2.pool.SimpleConnectionPool(1, 20, **DB_CONFIG)
+#         if db_pool:
+#             logger.info("Supabase connection pool initialized successfully.")
+#         else:
+#             logger.error("Failed to initialize Supabase connection pool.")
+#     except Exception as e:
+#         logger.error(f"Error initializing Supabase connection: {str(e)}")
+#         raise
 
 # # Dictionary to store user state and data during registration
 # user_states = {}
@@ -436,15 +446,21 @@ if __name__ == "__main__":
 #     save_user_data(chat_id)
 #     send_social_links(chat_id)
 
-# # Save user data to SQLite
+# # Save user data to Supabase
 # def save_user_data(chat_id):
-#     conn = sqlite3.connect(DB_FILE)
-#     c = conn.cursor()
-#     c.execute("INSERT INTO users (chat_id, service, name, age, language_test, phone) VALUES (?, ?, ?, ?, ?, ?)",
-#               (chat_id, user_states[chat_id]['service'], user_states[chat_id]['name'],
-#                user_states[chat_id]['age'], user_states[chat_id]['language_test'], user_states[chat_id]['phone']))
-#     conn.commit()
-#     conn.close()
+#     conn = db_pool.getconn()
+#     try:
+#         c = conn.cursor()
+#         c.execute("INSERT INTO users (chat_id, service, name, age, language_test, phone) VALUES (%s, %s, %s, %s, %s, %s)",
+#                   (chat_id, user_states[chat_id]['service'], user_states[chat_id]['name'],
+#                    user_states[chat_id]['age'], user_states[chat_id]['language_test'], user_states[chat_id]['phone']))
+#         conn.commit()
+#         logger.info(f"Saved user data for chat_id: {chat_id}")
+#     except Exception as e:
+#         logger.error(f"Error saving user data: {str(e)}")
+#         raise
+#     finally:
+#         db_pool.putconn(conn)
 #     del user_states[chat_id]
 
 # # Send social media links
@@ -464,11 +480,17 @@ if __name__ == "__main__":
 #         bot.send_message(message.chat.id, "Bu buyruq faqat admin uchun!")
 #         return
 
-#     conn = sqlite3.connect(DB_FILE)
-#     c = conn.cursor()
-#     c.execute("SELECT * FROM users")
-#     users = c.fetchall()
-#     conn.close()
+#     conn = db_pool.getconn()
+#     try:
+#         c = conn.cursor()
+#         c.execute("SELECT * FROM users")
+#         users = c.fetchall()
+#         logger.info(f"Fetched {len(users)} users for admin request")
+#     except Exception as e:
+#         logger.error(f"Error fetching users: {str(e)}")
+#         raise
+#     finally:
+#         db_pool.putconn(conn)
 
 #     if not users:
 #         bot.send_message(message.chat.id, "Hozircha ro'yxatdan o'tgan foydalanuvchilar yo'q.")
@@ -485,7 +507,6 @@ if __name__ == "__main__":
 #                      f"Telefon: {phone}\n"
 #                      "--------------------\n")
     
-#     # Split message if too long (Telegram has a 4096-character limit)
 #     if len(response) > 4096:
 #         for i in range(0, len(response), 4096):
 #             bot.send_message(message.chat.id, response[i:i+4096])
@@ -510,13 +531,20 @@ if __name__ == "__main__":
 
 # @server.route('/')
 # def webhook():
+#     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
 #     bot.remove_webhook()
-#     bot.set_webhook(url=f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{bot.token}")
+#     bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+#     logger.info(f"Webhook set to: https://{render_url}/{bot.token}")
 #     return "Webhook set!", 200
 
 # # Start the server
 # if __name__ == "__main__":
-#     init_db()  # Initialize the database
+#     logger.info("Starting bot...")
+#     init_db_pool()  # Initialize the database connection pool
+#     render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'smartway-edu-bot.onrender.com')
 #     bot.remove_webhook()
-#     bot.set_webhook(url=f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{bot.token}")
-#     server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+#     bot.set_webhook(url=f"https://{render_url}/{bot.token}")
+#     port = int(os.environ.get("PORT", 5000))
+#     logger.info(f"Starting Flask server on port {port}")
+#     server.run(host="0.0.0.0", port=port)
+    
